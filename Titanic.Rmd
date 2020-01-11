@@ -1,0 +1,125 @@
+---
+title: "Untitled"
+author: "Sujatha"
+date: "29/12/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+## loading all the required library using Pacman. Its a package management library that lets you install and load libraries using just one code of line
+
+pacman::p_load(data.table, rpart, rpart.plot, caret, randomForest, gbm, pROC, MASS, party, reshape, ggplot2)
+```
+
+__Exploratory analysis on the Dataset__
+```{r}
+train <- fread("train.csv", stringsAsFactors = F)
+str(train)
+
+lapply(train, function(x) sum(is.na(x))) ## missing data upto 20% in Age
+
+train <- train[, -c(1,4,9,10,11,12)] ## removal of passenger id, Name, Ticket, Cabin, Embarked
+
+train$Sex <- ifelse(train$Sex == 'male', 1, 0)
+
+summary(train$Age) 
+
+train$Age[is.na(train$Age)] <- round(mean(train$Age, na.rm = T)) # imputed missing values with mean age
+train$Age[is.nan(train$Age)] <- round(mean(train$Age, na.rm = T))
+train$Age[is.infinite(train$Age)] <- round(mean(train$Age, na.rm = T))
+
+## Corelation map for the dataset (Can be seen that only passenger class and Sex matters the most, but bcoz it is a classification prblem and not prediction, these results will not be considered)
+heatmap(cor(train), Rowv = NA, Colv = NA)
+cor_matrix <- round(cor(train),2)
+cor_matrix <- melt(cor_matrix)
+ggplot(cor_matrix, aes(x = X1, y = X2, fill = value)) +
+  scale_fill_gradient(low="wheat", high="orangered") +
+  geom_tile() + 
+  geom_text(aes(x = X1, y = X2, label = value)) +
+  ggtitle("Correlation heatmap for dataset")
+
+
+table(train$Survived)
+```
+
+__DATA split into training and testing data followed by k fold cross validation__
+```{r}
+# randomly order the dataset
+set.seed(12345)
+rows <- sample(nrow(train))
+train <- train[rows, ]
+
+# find rows to split on
+split <- round(nrow(train) * 0.7)
+training <- train[1:split, ]
+test <- train[(split+1):nrow(train), ]
+
+# confirm the size of the split
+round(nrow(training)/nrow(train), digits = 3)
+
+# 10 fold cross validation
+set.seed(12345)
+tr <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+```
+
+__Decision Trees__
+```{r}
+# Random forest 
+set.seed(12345)
+rf <- randomForest(as.factor(training$Survived) ~., data = training, ntree = 500, mtry = 5, importance = T)
+varImpPlot(rf, type = 1)
+
+#confusion matrix 
+rf.pred <- predict(rf, test)
+confusionMatrix(rf.pred, as.factor(test$Survived)) ## 80% accuracy
+
+```
+
+__Logit__
+```{r}
+
+logit.reg <- train(as.factor(Survived) ~ ., training, method = 'glm', trControl = tr, family = binomial(link = 'logit'))
+summary(logit.reg)
+
+logit.pred <- predict(logit.reg, newdata = test, type = 'prob')
+
+#Confusion Matrix
+table(logit.pred$`1` > 0.4, test$Survived) ## 80% accurate model
+
+```
+
+__Application of the model to the submission test__
+```{r}
+submission_test <- fread("test.csv")
+str(submission_test)
+submission_test_1 <- submission_test[, -c(1, 3, 8:11)]
+submission_test_1$Sex <- ifelse(submission_test_1$Sex == 'male', 1, 0)
+summary(submission_test$Age)
+submission_test_1$Age[is.na(submission_test_1$Age)] <- round(mean(submission_test_1$Age, na.rm = T))
+submission_test_1$Age[is.nan(submission_test_1$Age)] <- round(mean(submission_test_1$Age, na.rm = T))
+submission_test_1$Age[is.infinite(submission_test_1$Age)] <- round(mean(submission_test_1$Age, na.rm = T))
+
+
+# Logit model (0.4 is the cutoff threshold)
+logit.pred.test <- predict(logit.reg, newdata = submission_test_1, type = 'prob')
+class(logit.pred.test)
+setDT(logit.pred.test)
+results <- logit.pred.test[, PassengerId:= submission_test$PassengerId]
+results <- logit.pred.test[, Survived:= ifelse(logit.pred.test$`1` > 0.4, 1, 0)]
+results <- results[, -c(1,2)]
+write.csv(results, "Results.csv")
+
+# Random Forest Model (o.5 is the cut off threshold)
+reg <- predict(rf, submission_test_1)
+class(reg)
+Rf.Results <- as.data.table(reg)
+Rf.Results <- Rf.Results[, PassengerId:= submission_test$PassengerId]
+Rf.Results <- Rf.Results[, Survived:= Rf.Results$reg]
+Rf.Results <- Rf.Results[,-1]
+write.csv(Rf.Results, "rf_results.csv")
+```
+
