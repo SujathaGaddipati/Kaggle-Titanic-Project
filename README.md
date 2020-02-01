@@ -4,7 +4,7 @@ It's the Kaggle Titanic Machine Learning Comepetition code. Its a simple code wr
 ## Getting Started
 In the folder I have included the csv files that trains and tests the model. Following is a brief on the files included.
 
-EDA.ipynb = Jypter notebook for EDA on the database\   
+EDA.ipynb = Jypter notebook for EDA on the database   
 train.csv = File used for training the ML models\
 test.csv = File used for the end submission in kaggle\
 Titanic.Rmd = It is the markdown file for the R code\
