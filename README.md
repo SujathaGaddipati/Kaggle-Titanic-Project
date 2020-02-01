@@ -1,9 +1,10 @@
 # Kaggle-Titanic-Project
 ## Introduction
-It's the Kaggle Titanic Machine Learning Comepetition code. Its a simple code written in R to predict which passengers survived the shipwreck disaster. I have written commands lor logistic regression and random forest regression with model accuracy of about 80%. My score on Kaggle with this code was 0.75. 
+It's the Kaggle Titanic Machine Learning Comepetition code. Its a simple code written in python and R to predict which passengers survived the shipwreck disaster. I have written commands lor logistic regression and random forest regression with model accuracy of about 80%. My score on Kaggle with this code was 0.75. 
 ## Getting Started
 In the folder I have included the csv files that trains and tests the model. Following is a brief on the files included.
 
+EDA.ipynb = Jypter notebook for EDA on the database\   
 train.csv = File used for training the ML models\
 test.csv = File used for the end submission in kaggle\
 Titanic.Rmd = It is the markdown file for the R code\
